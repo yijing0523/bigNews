@@ -15,6 +15,8 @@
   <script src="./libs/jquery-1.12.4.min.js"></script>
   <!-- 引入bootstrap的js文件 -->
   <script src="./libs/bootstrap/js/bootstrap.min.js"></script>
+  <!-- 导入请求接口文件地址 -->
+  <script src="./libs/http.js"></script>
 </head>
 
 <body>
@@ -37,6 +39,72 @@
       </form>
     </div>
   </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+              aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">温馨提示</h4>
+        </div>
+        <div class="modal-body">
+          ...
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    $(function () {
+      // 给登录按钮添加点击事件
+      $('.input_sub').on('click', function (e) {
+        // 因为在form表单里面,所以要阻止表单默认跳转行为
+        e.preventDefault();
+        // 获取用户输入的用户名与密码
+        let username = $('.input_txt').val().trim();
+        let password = $('.input_pass').val().trim();
+        // 做一个非空判断,
+        if (username == '' || password == '') {
+          // alert('用户与密码不能为空');
+          // 因为系统alert弹窗太丑,所以我们要么自己创建一个div然后显示隐藏,或者用bootstrap
+          // 获取弹窗内容,并更改自己想要的内容
+          $('.modal-body').text('用户名和密码不能为空')
+          $('#myModal').modal();
+          return;
+        };
+        //发送ajax请求
+        $.ajax({
+          type: 'post',
+          url: window.BigNew.user_login,
+          dataType: 'json',
+          data: {
+            username: username,
+            password: password
+          },
+          success: function (backData) {
+            console.log(backData);
+            if (backData.code == 200) {
+              $('.modal-body').text(backData.msg);
+              $('#myModal').modal();
+              $('#myModal').on('hidden.bs.modal', function (e) {
+                // 获取token并存入本地
+                localStorage.setItem('token',backData.token);
+                window.location.href = './index.html';
+              })
+            } else {
+              $('.modal-body').text(backData.msg);
+              $('#myModal').modal();
+            }
+          }
+        })
+      })
+    })
+  </script>
 
 </body>
 
