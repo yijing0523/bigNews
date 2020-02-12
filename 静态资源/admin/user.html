@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="css/iconfont.css">
     <link rel="stylesheet" href="css/main.css">
     <script src="./libs/jquery-1.12.4.min.js"></script>
+    <!-- 引入http.js -->
+    <script src="./libs/http.js"></script>
 
 </head>
 
@@ -68,6 +70,95 @@
             </form>
         </div>
     </div>
+
+    <script>
+        // 入口函数
+        $(function () {
+            $.ajax({
+                type: 'get',
+                url: window.BigNew.user_detail,
+                success: function (backData) {
+                    console.log(backData);
+                    if (backData.code == 200) {
+                        //  将获取的内容添加到页面中
+                        $('img.user_pic').attr('src', backData.data.userPic);
+                        // 第一种方法
+                        // $('input.nickname').val(backData.data.nickname);
+                        // $('input.email').val(backData.data.email);
+                        // $('input.username').val(backData.data.username);
+                        // $('input.password').val(backData.data.password);
+                        // 第二种方法
+                        for (let key in backData.data) {
+                            $('input.' + key).val(backData.data[key]);
+                        }
+                    }
+                }
+            });
+
+
+            // 设置图片预览
+            $('#exampleInputFile').on('change', function () {
+                // 获取文件图片
+                let file1 = this.files[0];
+                // 创建图片地址
+                let url = URL.createObjectURL(file1);
+                // 将生成的图片地址给到预览img src里面
+                $('.user_pic').attr('src', url);
+            });
+
+
+            // 给修改按钮添加点击事件
+            $('.btn-edit').on('click', function (e) {
+                // 阻止表单里面的按钮默认跳转
+                e.preventDefault();
+                // 将修改成功的资料提交到后端
+                // 创建一个FormData对象,用FormData提交
+                let form1 = document.querySelector('form');
+                let fd = new FormData(form1);
+                $.ajax({
+                    type: 'post',
+                    url: window.BigNew.user_edit,
+                    contentType: false,
+                    processData: false,
+                    data: fd,
+                    success: function (backData) {
+                        console.log(backData);
+                        if (backData.code == 200) {
+                            alert(backData.msg);
+                            //  更新当前页面的用户头像与昵称
+                            // 第一种方法,直接刷新index页面,因为现在在用户页面,所以需要用找到父页面的
+                            // window.parent.location.reload();
+
+                            // 第二种方法
+                            // 当请求成功后,重新发送ajax请求,来更新当前页面的头像与昵称
+                            // 当前页面要想获取index里面的元素,也要用到parent.来去找父元素
+                            $.ajax({
+                                type: 'get',
+                                url: window.BigNew.user_info,
+                                // jquery设置添加请求头
+                                // headers : {
+                                //     Authorization : localStorage.getItem('token')
+                                // },
+                                // js原生设置请求头方法
+                                // xhr.setRequestHeader('Authorization',localStorage.getItem('token'))
+                                success: function (backData) {
+                                    console.log(backData);
+                                    // 将获取到的用户信息添加到页面指点的位置
+                                    if (backData.code == 200) {
+                                        parent.$('.user_info>span>i').text(backData.data.nickname);
+                                        parent. $('.user_info>img').attr('src', backData.data.userPic);
+                                        parent.$('.user_center_link>img').attr('src', backData.data.userPic);
+                                    };
+                                }
+                            });
+                        }
+
+                    }
+                });
+            })
+
+        });
+    </script>
 </body>
 
 </html>
