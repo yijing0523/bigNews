@@ -54,6 +54,38 @@
         </div>
     </div>
 
+
+    <!-- bootstrap 模板 -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">新增分类</h4>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <!-- 添加一个隐藏域来保存文章id -->
+                        <input type="hidden" id="hiddenID" name="id">
+                        <div class="form-group">
+                            <label for="recipient-name" class="control-label">分类名称:</label>
+                            <input type="text" class="form-control" name="name" id="recipient-name">
+                        </div>
+                        <div class="form-group">
+                            <label for="message-text" class="control-label">分类别名:</label>
+                            <input class="form-control" name="slug" id="message-text">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" id="btn_cancel" data-dismiss="modal">取消</button>
+                    <button type="button" id="addBtn" class="btn btn-primary">新增</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 创建模板 -->
     <script id="template_list" type="text/html">
     {{each data v}}
@@ -61,29 +93,149 @@
         <td> {{v.name}} </td>
         <td> {{v.slug}} </td>
         <td class="text-center">
-            <a href="javascript:void(0)"  data_id={{v.id}} data-toggle="modal" class=" btn btn-info btn-xs">编辑</a>
-            <a href="javascript:void(0)"  data_id={{v.id}} class="btn btn-danger btn-xs">删除</a>
+            <a href="javascript:void(0)"  data_id={{v.id}} data-toggle="modal" data-target="#myModal" class=" btn btn-info btn-xs">编辑</a>
+            <a href="javascript:void(0)"  data_id={{v.id}} class="btn btn-danger btn-xs btn-deldat" >删除</a>
         </td>
     </tr>
     {{/each}}
     </script>
-
+    <script src="./libs/http.js"></script>
     <script>
         // 入口函数
         $(function () {
             //一进到页面就发送ajax请求,来获取后端数据
-            $.ajax({
-                type: 'get',
-                url: window.BigNew.category_list,
-                success: function (backData) {
-                    console.log(backData);
-                    //   创建模板,并调用模板
-                    let resHtml = template('template_list',backData);
-                    // 将模板导入到页面中去
-                    $('tbody').html(resHtml);
+            getadd();
+            function getadd() {
+                $.ajax({
+                    type: 'get',
+                    url: window.BigNew.category_list,
+                    success: function (backData) {
+                        // console.log(backData);
+                        //   创建模板,并调用模板
+                        let resHtml = template('template_list', backData);
+                        // 将模板导入到页面中去
+                        $('tbody').html(resHtml);
 
+                    }
+                });
+            };
+
+            // 获取点击的事件,判断弹窗
+            // show.bs.modal	
+            // show 方法调用之后立即触发该事件。
+            // 如果是通过点击某个作为触发器的元素，则此元素可以通过事件的 relatedTarget 属性进行访问。
+            $('#myModal').on('show.bs.modal', function (e) {
+                console.log(e.relatedTarget);
+                if (e.relatedTarget == $('#xinzengfenlei')[0]) {
+                    $('#myModalLabel').text('新增分类');
+                    $('#addBtn').text('新增').addClass('btn-primary').removeClass('btn-success');
+                } else {
+                    $('#myModalLabel').text('编辑分类');
+                    $('#addBtn').text('编辑').addClass('btn-success').removeClass('btn-primary');
+
+                    //获取表单内容并添加到模态框
+                    $('#recipient-name').val($(e.relatedTarget).parent().prev().prev().text().trim());
+                    $('#message-text').val($(e.relatedTarget).parent().prev().text().trim());
+                    $('#hiddenID').val($(e.relatedTarget).attr('data_id'));
                 }
             });
+
+            // 给模态框里面添加点击事件
+            $('#addBtn').on('click', function () {
+                // 判断模态框按钮是编辑还是新增
+                // 用他的类名来判断
+                if ($(this).hasClass('btn-primary')) {
+                    // 获取用户输入内容
+                    let rename = $('#recipient-name').val().trim();
+                    let metext = $('#message-text').val().trim();
+                    // 新增按钮发送ajax请求
+                    $.ajax({
+                        type: 'post',
+                        url: window.BigNew.category_add,
+                        data: {
+                            name: rename,
+                            slug: metext
+                        },
+                        success: function (backData) {
+                            if (backData.code == 201) {
+                                $('#myModal').modal('hide');
+                                // 重新发送ajax请求来刷新页面
+                                getadd();
+                                // 清空输入框内容
+                                $('#recipient-name').val('');
+                                $('#message-text').val('');
+                            }
+                        }
+                    });
+                } else {
+                    // 编辑按钮发送ajax请求
+                    // 获取用户输入的内容
+                    // let editName = $('#recipient-name').val().trim();
+                    // let editMetext = $('#message-text').val().trim();
+                    // let editId = $('#hiddenID').val().trim();
+
+                    // 要是获取内容的数量太多,用FormData来获取回会更加方便
+                    // 但是FormData需要后端支持,
+                    // 所以我们要用到jquery里面的 serialize()方法
+                    // 但是serrialize()方法不能传输文件,FormData可以传输
+                    // 用法也是将name与后端获取名字改成一样
+                    // 找到需要获取元素的表单
+                    let data = $('#myModal form').serialize();
+
+                    $.ajax({
+                        type: 'post',
+                        url: window.BigNew.category_edit,
+                        // data: {
+                        //     id: editId,
+                        //     name: editName,
+                        //     slug: editMetext
+                        // },
+                        data: data,
+                        success: function (backData) {
+                            if (backData.code == 200) {
+                                // 隐藏模态框
+                                $('#myModal').modal('hide');
+                                // 重新发送ajax请求来刷新页面
+                                getadd();
+                            }
+                        }
+
+                    })
+                }
+            })
+
+            // 给取消按钮添加点击事件
+            $('#btn_cancel').on('click', function () {
+                //  找到模态框下面的后代元素form表单,reset()方法恢复默认值
+                $('#myModal form')[0].reset();
+            });
+
+            //  给删除按钮添加点击事件
+            // 因为删除按钮是动态事件,所以需要添加委托事件
+            $('tbody').on('click', '.btn-deldat', function () {
+                if (confirm('确定要删除吗?')) {
+                    //   获取当前点击事件行内id
+                    let delId = $(this).attr('data_id');
+                    // 发送ajax请求
+                    $.ajax({
+                        type: 'post',
+                        url: window.BigNew.category_delete,
+                        data:{
+                            id : delId
+                        },
+                        success: function (backData) {
+                            console.log(backData);
+
+                            if (backData.code == 204) {
+                                // 第一种方法
+                                getadd();
+                                // 第二种方法,将当前行删除
+                                // $(this).parent().parent().remove();
+                            }
+                        }
+                    })
+                }
+            })
         });
     </script>
 </body>
