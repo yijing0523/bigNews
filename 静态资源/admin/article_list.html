@@ -13,6 +13,10 @@
     <script src="./libs/jquery-1.12.4.min.js"></script>
     <!-- 引入模板引擎js文件 -->
     <script src="./libs/template-web.js"></script>
+    <!-- 引用bootstrap.js -->
+    <script src="./libs/bootstrap/js/bootstrap.min.js"></script>
+    <!-- 引用插件分页功能js -->
+    <script src="./libs/jquery.twbsPagination.js"></script>
 </head>
 
 <body>
@@ -68,7 +72,10 @@
                     </tr>
                 </tbody>
             </table>
+            <!-- 添加分页结构 -->
             <div class="row text-center">
+                <ul class="pagination" id="pagination"></ul>
+                <p>没有数据!</p>
             </div>
         </div>
     </div>
@@ -95,7 +102,7 @@
             <td class="text-center"> {{v.state}} </td>
             <td class="text-center">
                 <a href="article_edit.html" class="btn btn-default btn-xs">编辑</a>
-                <a href="javascript:void(0);"  data-id={{v.categoryId}} class="btn btn-danger btn-xs delete">删除</a>
+                <a href="javascript:void(0);"  data-id={{v.id}} class="btn btn-danger btn-xs delete">删除</a>
             </td>
         </tr>
         {{/each}}
@@ -118,25 +125,196 @@
                 }
             });
 
-            // 一进页面默认获取所有类别文章
-            $.ajax({
-                type: 'get',
-                url: BigNew.article_query,
-                data: {
-                    type: $('#selCategory').val(), //文章类别
-                    state: $('#selStatus').val(),
-                    page: 1,
-                    perpage: 6
-                },
-                success: function (backData) {
-                    console.log(backData);
-                    if (backData.code == 200) {
-                    //调用模板引擎的核心方法
-                    var resHtml = template('articleList_temp', backData);
-                    $('tbody').html(resHtml);
+            // 封装请求所有文章ajax事件
+            // 传参一:默认当前点击页码是第几页
+            function getData(myPage, callData) {
+                $.ajax({
+                    type: 'get',
+                    url: BigNew.article_query,
+                    data: {
+                        type: $('#selCategory').val(),
+                        state: $('#selStatus').val(),
+                        page: myPage,
+                        perpage: 6
+                    },
+                    success: function (backData) {
+                        console.log(backData);
+                        if (backData.code == 200) {
+                            var resHtml = template('articleList_temp', backData);
+                            $('tbody').html(resHtml);
+                            // 传参二:传一个回调函数
+                            // 加一个判断:如果回调函数为null则不执行.
+                            // 如果有回调函数,则将backData 以实参传入
+                            if (callData != null && backData.data.totalPage != 0) {
+                                $('#pagination').show();
+                                $('#pagination').next().hide();
+                                callData(backData);
+                            }else if (backData.data.totalPage == 0) {
+                                $('#pagination').hide();
+                                $('#pagination').next().show();
+
+                            }
+                        }
+
                     }
-                }
+                });
+            };
+
+
+            // 创建一个全局变量来保存函数里面的点击页码
+            let myPage = 1;
+            // 一进页面发送ajax请求,获取全部文章,并将分页插脚获取
+            getData(1, function (backData) {
+                // 将分页功能添加到获取所有文章功能里面
+                $('#pagination').twbsPagination({
+                    // 获取当前文章总页码
+                    totalPages: backData.data.totalPage,
+                    // 显示当前页面显示给用户看几个页码
+                    visiblePages: 7,
+                    first: '首页',
+                    prev: '上一页',
+                    next: '下一页',
+                    last: '尾页',
+                    // 给每个页面添加点击事件
+                    onPageClick: function (event, page) {
+                        // 获取当前点击页码数字,并保存在全局变量里面,
+                        myPage = page;
+                        // 二: 重新发送ajax请求,给每一页添加点击事件,并跳转指定页码
+                        getData(page, null);
+                    }
+                });
             });
+
+            // 三:给筛选添加点击事件并发送ajax请求
+            $('#btnSearch').on('click', function (e) {
+                // 阻止表单默认跳转
+                e.preventDefault();
+                // 发送ajax请求
+                getData(1, function (backData) {
+                    // 第一个参数是事件名称
+                    // 第二个参数是页码总页数
+                    // 第三个参数是显示当前页是几页
+                    $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, 1);
+                });
+            });
+
+            // 删除功能:
+            // 添加委托事件
+            $('tbody').on('click', '.delete', function () {
+                // 获取当前点击行内的id
+                let deleteId = $(this).attr('data-id');
+                console.log(deleteId);
+                if (confirm('你确定要删除他么?')) {
+                    // 发送ajax请求
+                    $.ajax({
+                        url: BigNew.article_delete,
+                        type: 'post',
+                        dataType: 'json',
+                        data: {
+                            id: deleteId
+                        },
+                        success: function (backData) {
+                            console.log(backData);
+                            if (backData.code == 204) {
+                                //  重新发送ajax请求来刷新页面和页码
+                                getData(myPage, function (backData) {
+                                    if (backData.data.totalPage == myPage-1 && myPage !=1){
+                                        myPage --;
+                                    }
+                                    $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, myPage);
+                                })
+
+                            }
+                        }
+                    })
+                }
+            })
+
+
+            // 一进页面发送ajax
+
+            // // 一进页面默认获取所有类别文章
+            // $.ajax({
+            //     type: 'get',
+            //     url: BigNew.article_query,
+            //     data: {
+            //         type: $('#selCategory').val(), //文章类别
+            //         state: $('#selStatus').val(),
+            //         page: 1,
+            //         perpage: 6
+            //     },
+            //     success: function (backData) {
+            //         console.log(backData);
+            //         if (backData.code == 200) {
+            //             //调用模板引擎的核心方法
+            //             var resHtml = template('articleList_temp', backData);
+            //             $('tbody').html(resHtml);
+            //             // 将分页功能添加到获取所有文章功能里面
+            //             $('#pagination').twbsPagination({
+            //                 // 获取当前文章总页码
+            //                 totalPages: backData.data.totalPage,
+            //                 // 显示当前页面显示给用户看几个页码
+            //                 visiblePages: 7,
+            //                 first: '首页',
+            //                 prev: '上一页',
+            //                 next: '下一页',
+            //                 last: '尾页',
+            //                 // 给每个页面添加点击事件
+            //                 onPageClick: function (event, page) {
+            //                     // 重新发送ajax请求,给每一页添加点击事件,并跳转指定页码
+            //                     $.ajax({
+            //                         type: 'get',
+            //                         url: BigNew.article_query,
+            //                         data: {
+            //                             type: $('#selCategory').val(), //文章类别
+            //                             state: $('#selStatus').val(),
+            //                             page: page,
+            //                             perpage: 6
+            //                         },
+            //                         success: function (backData) {
+            //                             console.log(backData);
+            //                             if (backData.code == 200) {
+            //                                 //调用模板引擎的核心方法
+            //                                 var resHtml = template('articleList_temp', backData);
+            //                                 $('tbody').html(resHtml);
+            //                             }
+            //                         }
+            //                     });
+            //                 }
+            //             });
+            //         }
+            //     }
+            // });
+
+            // // 给筛选按钮添加点击事件
+            // $('#btnSearch').on('click', function (e) {
+            //     // 阻止表单默认跳转
+            //     e.preventDefault();
+            //     // 发送ajax请求
+            //     $.ajax({
+            //         type: 'get',
+            //         url: BigNew.article_query,
+            //         data: {
+            //             type: $('#selCategory').val(),
+            //             state: $('#selStatus').val(),
+            //             page: 1,
+            //             perpage: 6
+            //         },
+            //         success: function (backData) {
+            //             console.log(backData);
+            //             if (backData.code == 200) {
+            //                 var resHtml = template('articleList_temp', backData);
+            //                 $('tbody').html(resHtml);
+            //                 // 第一个参数是事件名称
+            //                 // 第二个参数是页码总页数
+            //                 // 第三个参数是显示当前页是几页
+            //                 $('#pagination').twbsPagination('changeTotalPages', backData.data.totalPage, 1);
+            //             }
+
+            //         }
+            //     })
+            // })
+
 
         })
     </script>
