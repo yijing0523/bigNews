@@ -278,7 +278,7 @@
     <!--六:下拉框  模板 -->
     <script id="kuang_template" type="text/html">
      {{each data v}}
-     <li><a href="./article.html?id={{v.id}}">{{v.name}}</a></li>
+     <li><a href="./list.html?id={{v.id}}">{{v.name}}</a></li>
      {{/each}}
     </script>
 
@@ -355,11 +355,25 @@
                         //   创建模板,并调用模板
                         let resHtml = template('kuang_template', backData);
                         // 将模板导入到页面中去
-                        $('.level_two').html(resHtml);
+                        $('.level_two').html('<li class="up"></li>'+resHtml);
                         $('.left_menu').html(resHtml);
                     }
                 }
             });
+            // 7.搜索框
+            // 给搜索按钮添加点击事件
+            $('.search_btn').on('click',function(){
+                // 获取搜索框内容
+                let searchTxt = $('.search_txt').val().trim();
+                // 非空判断
+                if ( searchTxt == '') {
+                    alert('搜索框内部能为空!');
+                    return;
+                }else{
+                    // 搜索成功,跳转列表页
+                    window.location.href='./list.html?search='+searchTxt;
+                }
+            })
         })
     </script>
 </body>

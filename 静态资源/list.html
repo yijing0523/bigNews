@@ -227,6 +227,162 @@
     </div>
     <!-- 导包template -->
     <script src="./js/template-web.js"></script>
+
+    <!-- 列表页数据 模板 -->
+    <script id="list_template" type="text/html">
+        {{each data.data v}}
+        <div class="common_news_list">
+                <a href="./article.html?id={{v.id}}" class="list_pic"><img src="{{v.cover}}" alt=""></a>
+                    <h4><a href="./article.html?id={{v.id}}">{{v.title}}</a></h4>
+                    <p>{{v.intro}}</p>
+                    <div class="new_info">
+                        <span>标签：{{v.category}}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<i class="fa fa-eye"></i>&nbsp;阅读( {{v.read}}
+                        )&nbsp;&nbsp;&nbsp;<i class="fa fa-commenting"></i>&nbsp;评论( {{v.comments}} )</span>
+                        <b>发布于 {{v.date}}</b>
+                    </div>
+        </div>
+        {{/each}}
+    </script>
+
+    <!-- 四:最新评论 模板 -->
+    <script id="intro_template" type="text/html">
+        {{each data v}}
+        <li>
+            <span>{{v.author.substr(0,1)}}</span>
+            <b><em>{{v.author}}</em>{{v.date}}说:</b>
+            <strong>{{v.intro}}</strong>
+        </li>
+        {{/each}}
+    </script>
+
+    <!-- 五:焦点关注  模板-->
+    <script id="guangzhu_template" type="text/html">
+    {{each data v}}
+    <li><a href="./article.html?id={{v.id}}">{{v.intro}}</a></li>
+    {{/each}}
+    </script>
+
+    <!--六:下拉框  模板 -->
+    <script id="kuang_template" type="text/html">
+     {{each data v}}
+     <li><a href="./list.html?id={{v.id}}">{{v.name}}</a></li>
+     {{/each}}
+    </script>
+
+    <script>
+        // 入口函数
+        $(function () {
+            // 获取url带过来的值 =前面的
+            let urlTxt = window.location.search.split('=')[0];
+            // console.log(urlTxt);
+            // 获取url带过来的值 =后面的
+            let urlId = window.location.search.split('=')[1];
+            // 根据url带过来的数据来做判断
+            if (urlTxt == '') {
+                // url没带过来数据,重新回到首页
+                window.location.href = './index.html';
+            } else if (urlTxt == '?id') {
+                // url带回来的数据是id类别
+                $.ajax({
+                    type: 'get',
+                    url: 'http://localhost:8080/api/v1/index/search',
+                    data: {
+                        type: urlId
+                    },
+                    success: function (backData) {
+                        console.log(backData);
+                        if (backData.data.data.lenght == 0) {
+                            $('.setfr').html('<div class="list_title"><h3>没有数据</h3></div>')
+                        } else {
+                            let resHtml = template('list_template', backData);
+                            $('.setfr').html('<div class="list_title"><h3>' + backData.data.data[0].category + '</h3></div>' + resHtml);
+                        }
+
+                    }
+                })
+            } else if (urlTxt == '?search') {
+                // 将获取的url值转换为中文
+                urlId = decodeURI(urlId);
+                // console.log(urlId);
+                $.ajax({
+                    type: 'get',
+                    url: 'http://localhost:8080/api/v1/index/search',
+                    data: {
+                        key: urlId
+                    },
+                    success: function (backData) {
+                        let resHtml = template('list_template', backData);
+                        $('.setfr').html('<div class="list_title"><h3> 搜索关键词:' + urlId + '</h3></div>' + resHtml);
+                    }
+                });
+            };
+            // 3.热门排行
+            $.ajax({
+                type: 'get',
+                url: 'http://localhost:8080/api/v1/index/rank',
+                success: function (backData) {
+                    // console.log(backData);
+                    for (let i = 0; i < backData.data.length; i++) {
+                        $(".content_list>li").eq(i).children('a').text(backData.data[i].title);
+                        $(".content_list>li").eq(i).children('a').attr('href', './article.html?id=' + backData.data[i].id)
+                    }
+                }
+            });
+
+            // 4.最新评论
+            $.ajax({
+                type: 'get',
+                url: 'http://localhost:8080/api/v1/index/latest_comment',
+                success: function (backData) {
+                    // console.log(backData);\
+                    let resHtml = template('intro_template', backData);
+                    $('.comment_list').html(resHtml);
+                }
+            });
+
+            // 5.焦点关注
+            $.ajax({
+                type: 'get',
+                url: 'http://localhost:8080/api/v1/index/attention',
+                success: function (backData) {
+                    // console.log(backData);
+                    let resHtml = template('guangzhu_template', backData);
+                    $('.guanzhu_list').html(resHtml);
+
+                }
+            });
+            // 6.下拉菜单与目录
+            $.ajax({
+                type: 'get',
+                url: 'http://localhost:8080/api/v1/index/category',
+                success: function (backData) {
+                    // console.log(backData);
+                    if (backData.code == 200) {
+                        //   创建模板,并调用模板
+                        let resHtml = template('kuang_template', backData);
+                        // 将模板导入到页面中去
+                        $('.level_two').html('<li class="up"></li>' + resHtml);
+                        $('.left_menu').html(resHtml);
+                    }
+                }
+            });
+            // 7.搜索框
+            // 给搜索按钮添加点击事件
+            $('.search_btn').on('click', function () {
+                // 获取搜索框内容
+                let searchTxt = $('.search_txt').val().trim();
+                // 非空判断
+                if (searchTxt == '') {
+                    alert('搜索框内部能为空!');
+                    return;
+                } else {
+                    // 搜索成功,跳转列表页
+                    window.location.href = './list.html?search=' + searchTxt;
+                }
+            })
+
+        });
+    </script>
 </body>
 
 </html>
