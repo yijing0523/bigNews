@@ -142,7 +142,7 @@
         </tbody>
       </table>
       <div class="row text-center">
-        <ul class="pagination pagination-sm">
+        <!-- <ul class="pagination pagination-sm">
           <li class="page-item first disabled"><a href="#" class="page-link">首页</a></li>
           <li class="page-item prev disabled"><a href="#" class="page-link">上一页</a></li>
           <li class="page-item active"><a href="#" class="page-link">1</a></li>
@@ -154,12 +154,146 @@
           <li class="page-item"><a href="#" class="page-link">7</a></li>
           <li class="page-item next"><a href="#" class="page-link">下一页</a></li>
           <li class="page-item last"><a href="#" class="page-link">尾页</a></li>
-        </ul>
+        </ul> -->
         <ul id="pagination" class="pagination-sm"></ul>
       </div>
 
     </div>
   </div>
+  <!-- 引入http.js -->
+  <script src="./libs/http.js"></script>
+  <!-- 引入分页插件js -->
+  <script src="./libs/jquery.twbsPagination.js"></script>
+  <!-- 引入bootstrap.js -->
+  <script src="./libs/bootstrap/js/bootstrap.min.js"></script>
+
+  <!-- 评论列表 模板 -->
+  <script id="comment_temp" type="text/html">
+  {{each data.data v}}
+  {{if v.state == "待审核"}}
+  <tr class="danger">
+  {{else}}
+  <tr>
+  {{/if}}
+    <td>{{v.author}}</td>
+    <td>{{v.content}}</td>
+    <td>{{v.title}}</td>
+    <td>{{v.date}} {{v.time}}</td>
+    <td>{{v.state}}</td>
+    <td class="text-center">
+      {{if  v.state == "待审核" }}
+      <a href="javascript:void(0);" data_id={{v.id}} class="btn btn-info btn-xs btn_pizhu">批准</a>
+      {{else if  v.state == "已通过"}}
+      <a href="javascript:void(0);" data_id={{v.id}} class="btn btn-warning btn-xs bth_jujie">拒绝</a>
+      {{/if}}
+      <a href="javascript:void(0);" data_id={{v.id}} class="btn btn-danger btn-xs btn_shachu">删除</a>
+    </td>
+  </tr>
+  {{/each}}
+  </script>
+  <script>
+    // 入口函数
+    $(function () {
+      let myPage = 1;
+      function getData(myPage, callData) {
+        $.ajax({
+          type: 'get',
+          url: BigNew.comment_list,
+          data: {
+            page: myPage,
+            perpage: 6
+          },
+          success: function (backData) {
+            console.log(backData);
+            let resHtml = template('comment_temp', backData);
+            $('tbody').html(resHtml);
+            if (callData != null) {
+              callData(backData)
+            }
+          }
+        });
+      };
+
+      getData(myPage, function (backData) {
+        $('#pagination').twbsPagination({
+          totalPages: backData.data.totalPage,
+          visiblePages: 5,
+          first: '首页',
+          prev: '上一页',
+          next: '下一页',
+          last: '尾页',
+          onPageClick: function (event, page) {
+            // 获取当前点击页码数字,并保存在全局变量里面,
+            myPage = page;
+            // 二: 重新发送ajax请求,给每一页添加点击事件,并跳转指定页码
+            getData(page, null);
+          }
+        });
+      });
+
+      //  批注 
+      $('tbody').on('click', '.btn_pizhu', function () {
+        // 获取评论id 
+        let commentId = $(this).attr('data_id');
+        // console.log(commentId);
+        $.ajax({
+          type: 'post',
+          url: BigNew.comment_pass,
+          data: {
+            id: commentId
+          },
+          success: function (backData) {
+            alert('评论通过');
+            getData(myPage,null);
+          }
+        })
+
+      });
+      //  拒绝
+      $('tbody').on('click', '.bth_jujie', function () {
+        // 获取评论id 
+        let commentId = $(this).attr('data_id');
+        // console.log(commentId);
+        $.ajax({
+          type: 'post',
+          url: BigNew.comment_reject,
+          data: {
+            id: commentId
+          },
+          success: function (backData) {
+            alert('评论拒绝');
+            getData(myPage,null);
+          }
+        })
+
+      });
+      //  删除 
+      $('tbody').on('click', '.btn_shachu', function () {
+        if (confirm('你确定要删除它嘛?')) {
+          // 获取评论id 
+          let commentId = $(this).attr('data_id');
+          // console.log(commentId);
+          $.ajax({
+            type: 'post',
+            url: BigNew.comment_delete,
+            data: {
+              id: commentId
+            },
+            success: function (backData) {
+              alert('评论删除');
+              getData(myPage,function(backData){
+                if (backData.data.totalPage == myPage-1 && myPage !=1){
+                  myPage --;
+                }
+                  $('#pagination').twbsPagination('changeTotalPages',backData.data.totalPage,myPage);
+              });
+            }
+          });
+        }
+
+      });
+    })
+  </script>
 </body>
 
 </html>
