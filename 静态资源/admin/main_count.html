@@ -18,7 +18,7 @@
     <div class="container-fluid">
         <div class="row spannel_list">
             <div class="col-sm-3 col-xs-6">
-                <div class="spannel">
+                <div class="spannel zong">
                     <em>10015</em><span>篇</span>
                     <b>总文章数</b>
                 </div>
@@ -59,13 +59,33 @@
         <div class="column_pannel" id="column_show"></div>
     </div>
 
+    <!-- 获取最新数据 -->
+    <script>
+        $.ajax({
+            type: 'get',
+            url: 'http://localhost:8080/api/v1/admin/data/info',
+            success: function (backData) {
+                // console.log(backData);
+                $('.zong').children('em').html(backData.totalComment);
+                $('.scolor01').children('em').html(backData.dayComment);
+                $('.scolor02').children('em').html(backData.totalArticle);
+                $('.scolor03').children('em').html(backData.dayComment);
+
+            }
+        });
+    </script>
 
     <!-- 折线图 -->
     <script>
-        var json = '{"code":200,"msg":"获取成功","date":[{"date":"2019-05-20","count":23},{"date":"2019-05-21","count":19},{"date":"2019-05-22","count":29},{"date":"2019-05-23","count":24},{"date":"2019-05-24","count":28},{"date":"2019-05-25","count":28},{"date":"2019-05-26","count":19},{"date":"2019-05-27","count":25},{"date":"2019-05-28","count":25}]}';
-        var obj = JSON.parse(json);
-        loadEchars(obj);
-
+        // 获取ajax月新增数据
+        $.ajax({
+            type: 'get',
+            url: 'http://localhost:8080/api/v1/admin/data/article',
+            success: function (backData) {
+                // console.log(backData);
+                loadEchars(backData);
+            }
+        });
         function loadEchars(obj) {
             // 基于准备好的dom，初始化echarts实例
             var myChart = echarts.init(document.getElementById('curve_show'));
@@ -150,55 +170,101 @@
 
     <!-- 环形图 -->
     <script>
-        // 基于准备好的dom，初始化echarts实例
-        var myChart1 = echarts.init(document.getElementById('pie_show'));
+        // 获取ajax月新增数据
+        $.ajax({
+            type: 'get',
+            url: 'http://localhost:8080/api/v1/admin/data/category',
+            success: function (backData) {
+                console.log(backData);
+                getDay(backData)
+            }
+        });
+        function getDay(obj) {
+            // 基于准备好的dom，初始化echarts实例
+            var myChart1 = echarts.init(document.getElementById('pie_show'));
+            var keyMap = {
+                "articles": "value",
+                "val": "name"
+            };
+            var nameId = [];
+            var colorId = [];
+            for (var i = 0; i < obj.date.length; i++) {
+                var arr = obj.date[i];
 
-        option1 = {
-            title: {
-                left: 'center',
-                text: '分类文章数量比',
-            },
-            tooltip: {
-                trigger: 'item',
-                formatter: "{a} <br/>{b}: {c} ({d}%)"
-            },
-            legend: {
-                orient: 'horizontal',
-                x: 'center',
-                data: ['爱生活', '趣美味', '爱旅行', '爱电影', '爱游泳'],
-                top: 30
-            },
-            color: ['#5885e8', '#13cfd5', '#00ce68', '#ff9565', '#20ff19'],
-            series: [
-                {
-                    name: '分类名称',
-                    type: 'pie',
-                    radius: ['50%', '70%'],
-                    avoidLabelOverlap: false,
-                    label: {
-                        emphasis: {
-                            show: true,
-                            textStyle: {
-                                fontSize: '30',
-                                fontWeight: 'bold'
-                            }
-                        }
-                    },
-                    data: [
-                        { value: 335, name: '爱生活' },
-                        { value: 310, name: '趣美味' },
-                        { value: 234, name: '爱旅行' },
-                        { value: 135, name: '爱电影' },
-                        { value: 548, name: '爱游泳' }
-                    ]
+                for (var key in arr) {
+                    var newKey = keyMap[key];
+                    if (newKey) {
+                        arr[newKey] = arr[key];
+                        delete arr[key];
+                    }
                 }
-            ]
-        };
-        // 使用刚指定的配置项和数据显示图表。
-        myChart1.setOption(option1);
+            };
+            function color16(){//十六进制颜色随机
+			var r = Math.floor(Math.random()*256);
+			var g = Math.floor(Math.random()*256);
+			var b = Math.floor(Math.random()*256);
+			var color = '#'+r.toString(16)+g.toString(16)+b.toString(16);
+			return color;
+		   };
+            for (let i = 0; i < obj.date.length; i++) {
+                nameId.push(obj.date[i].name);
+                colorId.push(color16());
+            }
+            console.log(obj.date);
+            console.log(nameId);
+            console.log(colorId);
+
+
+            option1 = {
+                title: {
+                    left: 'center',
+                    text: '分类文章数量比',
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: "{a} <br/>{b}: {c} ({d}%)"
+                },
+                legend: {
+                    orient: 'horizontal',
+                    x: 'center',
+                    data: nameId,
+                    top: 30
+                },
+                color:colorId,
+                series: [
+                    {
+                        name: '分类名称',
+                        type: 'pie',
+                        radius: ['50%', '70%'],
+                        avoidLabelOverlap: false,
+                        label: {
+                            emphasis: {
+                                show: true,
+                                textStyle: {
+                                    fontSize: '16',
+                                    fontWeight: 'bold'
+                                }
+                            }
+                        },
+                        data: obj.date,
+                    }
+                ]
+            };
+            // 使用刚指定的配置项和数据显示图表。
+            myChart1.setOption(option1);
+        }
     </script>
     <!-- 柱状图 -->
     <script>
+        // // 获取ajax月新增数据
+        // $.ajax({
+        //     type: 'get',
+        //     url: 'http://localhost:8080/api/v1/admin/data/category',
+        //     success: function (backData) {
+        //         console.log(backData);
+        //         getDay(backData)
+        //     }
+        // });
         // 基于准备好的dom，初始化echarts实例
         var myChart2 = echarts.init(document.getElementById('column_show'));
 
@@ -212,11 +278,11 @@
                 axisPointer: {            // 坐标轴指示器，坐标轴触发有效
                     type: 'line'        // 默认为直线，可选为：'line' | 'shadow'
                 },
-                
+
             },
             legend: {
                 data: ['爱生活', '趣美味', '爱旅行', '爱电影', '爱游泳'],
-                top:30
+                top: 30
             },
             grid: {
                 left: '3%',
